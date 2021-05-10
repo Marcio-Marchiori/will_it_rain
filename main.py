@@ -49,11 +49,11 @@ rain_wind.dropna(inplace=True)
 X = rain_wind.loc[:,rain_wind.columns!='raintomorrow_Yes']
 y = rain_wind['raintomorrow_Yes']
 
+# Slicing the training/testing data.
 X_train,X_test, y_train, y_test = train_test_split(X,y, test_size=0.2, random_state=42)
 
+# Preprocessing the data so it will better fit the model.
 list_columns_to_use = ['mintemp', 'maxtemp', 'rainfall', 'humidity9am', 'humidity3pm', 'pressure9am', 'pressure3pm', 'temp9am', 'temp3pm', 'temp', 'humidity', 'precipitation3pm', 'precipitation9am', 'wind_gustspeed', 'wind_speed9am', 'wind_speed3pm',]
-
 scaler = MinMaxScaler()
-
 X_train.loc[:,list_columns_to_use] = scaler.fit_transform(X_train[list_columns_to_use])
 X_test.loc[:,list_columns_to_use] = scaler.transform(X_test[list_columns_to_use])
