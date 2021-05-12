@@ -15,6 +15,10 @@ import datetime
 from sklearn.decomposition import PCA
 from imblearn.over_sampling import SMOTE
 
+def rename_columns():
+    '''Renames all the columns to make a concat possible'''
+    return
+
 
 # Loading the data
 rain_data = pd.DataFrame(pd.read_csv('data/rain_data_aus.csv'))
@@ -30,7 +34,6 @@ wind_table_08 = pd.DataFrame(pd.read_csv('data/wind_table_08.csv'))
 
 # Droping columns that are leaking data to the model and that have over 30% of NaN data.
 rain_data.drop(columns=['modelo_vigente','amountOfRain','sunshine','evaporation','cloud3pm','cloud9am'],inplace=True)
-pd.get_dummies(rain_data)
 
 # Renaming all the remaining 7 table's columns 
 wind_table_02.columns = wind_table_01.columns
@@ -77,13 +80,65 @@ pca = PCA(n_components=100)
 pca.fit(X_train.T)
 
 df = pd.DataFrame(pca.components_.T)
+
+raining = pd.merge(rain_data,wind_table,how='inner',left_on=['date','location'],right_on=['date','location'])
+
+loca = {}
+slice_X_train = {}
+slice_y_train = {}
+slice_X_test = {}
+slice_y_test = {}
+
+for x in raining['location'].unique():
+    loca[x] = raining[raining['location']==x]
+    loca[x] = raining.drop(columns=['location'])
+    loca[x] = pd.get_dummies(loca[x],drop_first=True)
+    loca[x].dropna(inplace=True)
+    Z = loca[x].loc[:,loca[x].columns!='raintomorrow_Yes']
+    y = loca[x]['raintomorrow_Yes']
+
+    slice_X_train[x], slice_X_test[x], slice_y_train[x], slice_y_test[x] = train_test_split(Z,y)
+
+models_dict = {}
+scaler_dict = {}
+tf.config.experimental.set_memory_growth(tf.config.experimental.list_physical_devices('GPU')[0],True)
+
+for x in raining['location'].unique():
+    try:
+        scaler_dict[x] = MinMaxScaler()
+        slice_X_train[x].loc[:,list_columns_to_use] = scaler_dict[x].fit_transform(slice_X_train[x][list_columns_to_use])
+        slice_X_test[x].loc[:,list_columns_to_use] = scaler_dict[x].transform(slice_X_test[x][list_columns_to_use])
+        
+        oversample = SMOTE()
+        slice_X_train[x],slice_y_train[x] = oversample.fit_resample(slice_X_train[x],slice_y_train[x])
+
+        model = Sequential([
+            Dense(units=8,input_shape=(63,),activation='relu'),
+            Dense(units=2,activation='softmax')
+        ])
+
+        model.compile(optimizer=Adam(learning_rate=0.000005), loss='sparse_categorical_crossentropy',  metrics=['accuracy'])
+        models_dict[x] = model.fit(x=slice_X_train[x], y=slice_y_train[x], batch_size=20, epochs=200,validation_split=0.15, verbose=2, use_multiprocessing=True)
+    except:
+        print('Error on ',x)
 '''
 
 model = Sequential([
-    Dense(units=120,input_shape=(100,),activation='relu'),
-    Dense(units=32,activation='relu'),
-    Dense(units=1,activation='sigmoid')
+    Dense(units=120,input_shape=(111,),activation='relu'),
+    Dense(units=16,activation='relu'),
+    Dense(units=2,activation='softmax')
 ])
 
-model.compile(optimizer=Adam(learning_rate=0.00001), loss='binary_crossentropy',  metrics=['accuracy'])
-model.fit(x=X_train, y=y_train, batch_size=200, epochs=50,validation_split=0.15, verbose=2, use_multiprocessing=True)
+model.compile(optimizer=Adam(learning_rate=0.000005), loss='sparse_categorical_crossentropy',  metrics=['accuracy'])
+model.fit(x=X_train, y=y_train, batch_size=100, epochs=2000,validation_split=0.15, verbose=2, use_multiprocessing=True)
+
+'''
+model = Sequential([
+    Dense(units=120,input_shape=(111,),activation='relu'),
+    Dense(units=16,activation='relu'),
+    Dense(units=2,activation='softmax')
+])
+
+model.compile(optimizer=Adam(learning_rate=0.000005), loss='sparse_categorical_crossentropy',  metrics=['accuracy'])
+model.fit(x=X_train, y=y_train, batch_size=100, epochs=2000,validation_split=0.15, verbose=2, use_multiprocessing=True)
+'''
