@@ -1,0 +1,7 @@
+tf_nightly==2.6.0.dev20210508
+pandas==1.2.4
+imbalanced_learn==0.8.0
+numpy==1.20.2
+imblearn==0.0
+scikit_learn==0.24.2
+tensorflow==2.4.1
