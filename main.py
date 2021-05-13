@@ -3,22 +3,16 @@ import numpy as np
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
-from sklearn.compose import ColumnTransformer
-from sklearn.pipeline import Pipeline
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Activation, Dense
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.metrics import categorical_crossentropy
-import datetime
-from sklearn.decomposition import PCA
 from imblearn.over_sampling import SMOTE
+import datetime
 
-def rename_columns():
-    '''Renames all the columns to make a concat possible'''
-    return
-
+list_names = ['rain_data_aus.csv','wind_table_01.csv','wind_table_02.csv','wind_table_03.csv','wind_table_04.csv','wind_table_05.csv','wind_table_06.csv','wind_table_07.csv','wind_table_08.csv']
 
 # Loading the data
 rain_data = pd.DataFrame(pd.read_csv('data/rain_data_aus.csv'))
@@ -75,9 +69,50 @@ X_test.loc[:,list_columns_to_use] = scaler.transform(X_test[list_columns_to_use]
 
 tf.config.experimental.set_memory_growth(tf.config.experimental.list_physical_devices('GPU')[0],True)
 
+def model():
+    model = Sequential([
+        Dense(units=120,input_shape=(111,),activation='relu'),
+        Dense(units=16,activation='relu'),
+        Dense(units=2,activation='softmax')
+    ])
+
+    model.compile(optimizer=Adam(learning_rate=0.000005), loss='sparse_categorical_crossentropy',  metrics=['accuracy'])
+    model.fit(x=X_train, y=y_train, batch_size=100, epochs=2000,validation_split=0.15, verbose=2, use_multiprocessing=True)
+
 '''
-pca = PCA(n_components=100)
-pca.fit(X_train.T)
+def plot_confusion_matrix(cm, classes,
+                        normalize=False,
+                        title='Confusion matrix',
+                        cmap=plt.cm.Blues):
+    """
+    This function prints and plots the confusion matrix.
+    Normalization can be applied by setting `normalize=True`.
+    """
+    plt.imshow(cm, interpolation='nearest', cmap=cmap)
+    plt.title(title)
+    plt.colorbar()
+    tick_marks = np.arange(len(classes))
+    plt.xticks(tick_marks, classes, rotation=45)
+    plt.yticks(tick_marks, classes)
+
+    if normalize:
+        cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+        print("Normalized confusion matrix")
+    else:
+        print('Confusion matrix, without normalization')
+
+    print(cm)
+
+    thresh = cm.max() / 2.
+    for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
+        plt.text(j, i, cm[i, j],
+            horizontalalignment="center",
+            color="white" if cm[i, j] > thresh else "black")
+
+    plt.tight_layout()
+    plt.ylabel('True label')
+    plt.xlabel('Predicted label')
+
 
 df = pd.DataFrame(pca.components_.T)
 
@@ -123,14 +158,7 @@ for x in raining['location'].unique():
         print('Error on ',x)
 '''
 
-model = Sequential([
-    Dense(units=120,input_shape=(111,),activation='relu'),
-    Dense(units=16,activation='relu'),
-    Dense(units=2,activation='softmax')
-])
 
-model.compile(optimizer=Adam(learning_rate=0.000005), loss='sparse_categorical_crossentropy',  metrics=['accuracy'])
-model.fit(x=X_train, y=y_train, batch_size=100, epochs=2000,validation_split=0.15, verbose=2, use_multiprocessing=True)
 
 '''
 model = Sequential([
